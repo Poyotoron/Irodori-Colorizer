@@ -1,0 +1,16 @@
+{
+    "name": "net.maaaaa.irodori-colorizer.Editor",
+    "rootNamespace": "Poyo.IrodoriColorizer.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
