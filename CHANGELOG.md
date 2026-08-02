@@ -1,12 +1,21 @@
 # Changelog
 
-## [0.1.0]
+このプロジェクトの変更履歴。バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
+
+## [0.1.0] - 2026-08-02
+
+初回リリース。Project ウィンドウと Hierarchy ウィンドウの行に色を付けて、フォルダやオブジェクトを見分けやすくする Editor 拡張。色はプロジェクトに保存され、リネームや移動をしても追従する。
 
 ### Added
-- Paint Project and Hierarchy rows with a solid color chosen from a fixed 16-color palette.
-- Set or clear colors from the right-click menu, with multi-selection support.
-- Persist colors in `ProjectSettings/` so they survive restarts; colors follow assets and
-  scene objects across rename and move.
-- Mirror a prefab instance color onto its source prefab asset in the Project window.
-- Add a Project Settings page to adjust fill strength, full-row fill, selection handling,
-  and text color.
+- **行の色付け**: Project / Hierarchy の行を、右クリックメニューから 16 色のパレットで色付けできる。複数選択したままの一括設定と、色の解除に対応する。
+- **色の永続化と追従**: 色は `ProjectSettings/` に保存され、Unity を再起動しても残る。色はパスではなくアセットの GUID / シーン上の識別子にひも付くため、フォルダやオブジェクトを移動・改名しても外れない。`Assets/` は汚さない。
+- **Prefab 色の Project への同期**: Hierarchy 上の Prefab インスタンスに付けた色を、元の Prefab アセット（Project 側）へ反映する。
+- **表示設定**: `Project Settings > Irodori Colorizer` から、塗りの濃さ・行全体を塗るか・選択行の扱い・文字色の自動判定などを調整できる。
+
+### 既知の不具合
+- **Prefab 色の Project 同期が動作しない**: Hierarchy の Prefab インスタンスに色を付けても、元 Prefab アセットの色が Project 側に反映されない。次回修正予定。
+- **アイコン表示でのレイアウト崩れ**: Project ウィンドウをアイコン（グリッド）表示にしているとき、色を付けたファイル / フォルダのアイコンと名前の表示が乱れる。リスト表示では発生しない。次回修正予定。
+
+### 既知の制限
+- プリセット機構（用途別のラベル束）・ラベル名バッジ・ラベルの編集 UI は今後のバージョンで対応予定。
+- Prefab ステージ内のオブジェクトへの色付けには未対応。
