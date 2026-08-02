@@ -1,0 +1,2 @@
+# Irodori-Colorizer
+Unityのフォルダやシーンオブジェクトを色分けするツール
