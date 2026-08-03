@@ -1,12 +1,45 @@
 # Changelog
 
-## [0.1.0]
+このプロジェクトの変更履歴。バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
+
+## [0.2.0] - 2026-08-03
+
+用途別のラベルを選べるプリセット機構を導入し、色や名前の調整、独自ラベルの追加に対応した。Project / Hierarchy の分類をプロジェクトに合わせて柔軟に整えられる。
 
 ### Added
-- Paint Project and Hierarchy rows with a solid color chosen from a fixed 16-color palette.
-- Set or clear colors from the right-click menu, with multi-selection support.
-- Persist colors in `ProjectSettings/` so they survive restarts; colors follow assets and
-  scene objects across rename and move.
-- Mirror a prefab instance color onto its source prefab asset in the Project window.
-- Add a Project Settings page to adjust fill strength, full-row fill, selection handling,
-  and text color.
+- **用途別プリセット**: `VRChat アバター改変` 13 件、`ベーシックカラー` 16 件、`汎用 Unity プロジェクト` 12 件のラベルを追加した。初期状態では前二つが有効になる。
+- **プリセットの切り替え**: プリセット単位で表示を切り替えられる。無効にしても割り当ては保持され、再び有効にすると元どおり復元される。
+- **ラベルの調整**: 内蔵ラベルの色・名前・表示状態を変更し、既定値へリセットできる。
+- **カスタムラベル**: カラーコード（Hex）から独自のラベルを追加・編集・削除できる。
+- **設定画面の拡張**: プリセットとラベル一覧を Project Settings から管理できる。
+- **Prefab ラベルの共有**: Prefab アセットに付けたラベルが、シーン上のすべてのインスタンスにも表示される。
+
+### Changed
+- **メニュー名**: 右クリックメニューを `Set Label…` / `Clear Label` に変更した。
+- **ラベル選択**: ポップアップをプリセット見出し付きの一覧へ刷新した。
+
+### Fixed
+- **Prefab ラベルの参照方式**: シーンと Project が元アセットの GUID に紐づく同じラベルを参照する方式へ変更し、表示が一致しない問題を修正した。
+- **アイコン表示**: Project のアイコン表示で、色を付けた項目のアイコンと名前が乱れる問題を修正した。
+
+### 既知の制限
+- ラベル名バッジ（行右端の名前表示）は未対応。
+- Prefab ステージ内のオブジェクトへの色付けには未対応。
+
+## [0.1.0] - 2026-08-02
+
+初回リリース。Project ウィンドウと Hierarchy ウィンドウの行に色を付けて、フォルダやオブジェクトを見分けやすくする Editor 拡張。色はプロジェクトに保存され、リネームや移動をしても追従する。
+
+### Added
+- **行の色付け**: Project / Hierarchy の行を、右クリックメニューから 16 色のパレットで色付けできる。複数選択したままの一括設定と、色の解除に対応する。
+- **色の永続化と追従**: 色は `ProjectSettings/` に保存され、Unity を再起動しても残る。色はパスではなくアセットの GUID / シーン上の識別子にひも付くため、フォルダやオブジェクトを移動・改名しても外れない。`Assets/` は汚さない。
+- **Prefab 色の Project への同期**: Hierarchy 上の Prefab インスタンスに付けた色を、元の Prefab アセット（Project 側）へ反映する。
+- **表示設定**: `Project Settings > Irodori Colorizer` から、塗りの濃さ・行全体を塗るか・選択行の扱い・文字色の自動判定などを調整できる。
+
+### 既知の不具合
+- **Prefab 色の Project 同期が動作しない**: Hierarchy の Prefab インスタンスに色を付けても、元 Prefab アセットの色が Project 側に反映されない。次回修正予定。
+- **アイコン表示でのレイアウト崩れ**: Project ウィンドウをアイコン（グリッド）表示にしているとき、色を付けたファイル / フォルダのアイコンと名前の表示が乱れる。リスト表示では発生しない。次回修正予定。
+
+### 既知の制限
+- プリセット機構（用途別のラベル束）・ラベル名バッジ・ラベルの編集 UI は今後のバージョンで対応予定。
+- Prefab ステージ内のオブジェクトへの色付けには未対応。

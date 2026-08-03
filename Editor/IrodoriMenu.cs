@@ -4,38 +4,38 @@ using UnityEngine;
 
 namespace Poyo.IrodoriColorizer.Editor
 {
-    /// <summary>選択対象への色の設定と解除を提供する。</summary>
+    /// <summary>選択対象へのラベルの設定と解除を提供する。</summary>
     internal static class IrodoriMenu
     {
-        [MenuItem(IrodoriInfo.AssetMenuRoot + "Set Color…", false, 1100)]
+        [MenuItem(IrodoriInfo.AssetMenuRoot + "Set Label…", false, 1100)]
         private static void ShowProjectPopup()
         {
             string[] guids = Selection.assetGUIDs;
             if (guids.Length > 0)
             {
-                IrodoriColorPopup.OpenProject(guids);
+                IrodoriLabelPopup.OpenProject(guids);
             }
         }
 
-        [MenuItem(IrodoriInfo.AssetMenuRoot + "Set Color…", true)]
+        [MenuItem(IrodoriInfo.AssetMenuRoot + "Set Label…", true)]
         private static bool ValidateShowProjectPopup()
         {
             return Selection.assetGUIDs.Length > 0;
         }
 
-        [MenuItem(IrodoriInfo.AssetMenuRoot + "Clear Color", false, 1101)]
+        [MenuItem(IrodoriInfo.AssetMenuRoot + "Clear Label", false, 1101)]
         private static void ClearProjectColor()
         {
             ClearProject(Selection.assetGUIDs);
         }
 
-        [MenuItem(IrodoriInfo.AssetMenuRoot + "Clear Color", true)]
+        [MenuItem(IrodoriInfo.AssetMenuRoot + "Clear Label", true)]
         private static bool ValidateClearProjectColor()
         {
             return Selection.assetGUIDs.Length > 0;
         }
 
-        [MenuItem(IrodoriInfo.GameObjectMenuRoot + "Set Color…", false, 30)]
+        [MenuItem(IrodoriInfo.GameObjectMenuRoot + "Set Label…", false, 30)]
         private static void ShowHierarchyPopup(MenuCommand command)
         {
             if (IsDuplicateInvocation(command))
@@ -46,11 +46,11 @@ namespace Poyo.IrodoriColorizer.Editor
             GameObject[] objects = Selection.gameObjects;
             if (objects.Length > 0)
             {
-                IrodoriColorPopup.OpenHierarchy(objects);
+                IrodoriLabelPopup.OpenHierarchy(objects);
             }
         }
 
-        [MenuItem(IrodoriInfo.GameObjectMenuRoot + "Clear Color", false, 31)]
+        [MenuItem(IrodoriInfo.GameObjectMenuRoot + "Clear Label", false, 31)]
         private static void ClearHierarchyColor(MenuCommand command)
         {
             if (IsDuplicateInvocation(command))
@@ -142,6 +142,27 @@ namespace Poyo.IrodoriColorizer.Editor
                     continue;
                 }
 
+                if (TryGetPrefabAssetGuid(obj, null, out string guid))
+                {
+                    if (settings.projectAssignments == null)
+                    {
+                        settings.projectAssignments = new List<IrodoriAssignment>();
+                    }
+
+                    changed |= Upsert(settings.projectAssignments, guid, labelId);
+
+                    if (settings.sceneAssignments.Count > 0)
+                    {
+                        GlobalObjectId prefabId = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+                        if (prefabId.identifierType != 0)
+                        {
+                            changed |= RemoveAssignment(settings.sceneAssignments, prefabId.ToString());
+                        }
+                    }
+
+                    continue;
+                }
+
                 GlobalObjectId id = GlobalObjectId.GetGlobalObjectIdSlow(obj);
                 if (id.identifierType == 0)
                 {
@@ -150,36 +171,11 @@ namespace Poyo.IrodoriColorizer.Editor
                 }
 
                 changed |= Upsert(settings.sceneAssignments, id.ToString(), labelId);
-
-                // NOTE: 子への着色で意図せずアセットを塗らないよう、Prefab インスタンスのルートだけを同期する。
-                if (PrefabUtility.GetNearestPrefabInstanceRoot(obj) != obj)
-                {
-                    continue;
-                }
-
-                string assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
-                if (string.IsNullOrEmpty(assetPath))
-                {
-                    continue;
-                }
-
-                string guid = AssetDatabase.AssetPathToGUID(assetPath);
-                if (string.IsNullOrEmpty(guid))
-                {
-                    continue;
-                }
-
-                if (settings.projectAssignments == null)
-                {
-                    settings.projectAssignments = new List<IrodoriAssignment>();
-                }
-
-                changed |= Upsert(settings.projectAssignments, guid, labelId);
             }
 
             if (foundUnstableId)
             {
-                Debug.LogWarning("Irodori Colorizer: シーンを保存してから色を設定してください。");
+                Debug.LogWarning("Irodori Colorizer: シーンを保存してからラベルを設定してください。");
             }
 
             SaveAndRefresh(changed);
@@ -192,14 +188,10 @@ namespace Poyo.IrodoriColorizer.Editor
                 return;
             }
 
-            List<IrodoriAssignment> assignments = IrodoriSettings.instance.sceneAssignments;
-            if (assignments == null || assignments.Count == 0)
-            {
-                return;
-            }
-
+            IrodoriSettings settings = IrodoriSettings.instance;
             bool changed = false;
             bool foundUnstableId = false;
+            var assetGuids = new HashSet<string>(System.StringComparer.Ordinal);
             for (int i = 0; i < objects.Length; i++)
             {
                 GameObject obj = objects[i];
@@ -209,27 +201,40 @@ namespace Poyo.IrodoriColorizer.Editor
                 }
 
                 GlobalObjectId id = GlobalObjectId.GetGlobalObjectIdSlow(obj);
-                if (id.identifierType == 0)
+                if (id.identifierType != 0 && RemoveAssignment(settings.sceneAssignments, id.ToString()))
                 {
-                    foundUnstableId = true;
+                    changed = true;
                     continue;
                 }
 
-                string key = id.ToString();
-                for (int j = assignments.Count - 1; j >= 0; j--)
+                bool isPrefabRoot = PrefabUtility.GetNearestPrefabInstanceRoot(obj) == obj;
+                if (isPrefabRoot &&
+                    TryGetPrefabAssetGuid(obj, null, out string guid) &&
+                    !string.IsNullOrEmpty(FindLabel(settings.projectAssignments, guid)))
                 {
-                    IrodoriAssignment assignment = assignments[j];
-                    if (assignment != null && assignment.key == key)
-                    {
-                        assignments.RemoveAt(j);
-                        changed = true;
-                    }
+                    assetGuids.Add(guid);
+                }
+                else if (id.identifierType == 0 && !isPrefabRoot)
+                {
+                    foundUnstableId = true;
+                }
+            }
+
+            if (assetGuids.Count > 0 && EditorUtility.DisplayDialog(
+                    "ラベルの解除",
+                    "この色は元の Prefab アセットに付いています。解除すると Project の表示と、シーン上の他のインスタンスからも色が消えます。",
+                    "解除",
+                    "キャンセル"))
+            {
+                foreach (string guid in assetGuids)
+                {
+                    changed |= RemoveAssignment(settings.projectAssignments, guid);
                 }
             }
 
             if (foundUnstableId)
             {
-                Debug.LogWarning("Irodori Colorizer: シーンを保存してから色を解除してください。");
+                Debug.LogWarning("Irodori Colorizer: シーンを保存してからラベルを解除してください。");
             }
 
             SaveAndRefresh(changed);
@@ -267,15 +272,7 @@ namespace Poyo.IrodoriColorizer.Editor
                 return null;
             }
 
-            GlobalObjectId firstId = GlobalObjectId.GetGlobalObjectIdSlow(objects[0]);
-            if (firstId.identifierType == 0)
-            {
-                return null;
-            }
-
-            List<IrodoriAssignment> assignments = IrodoriSettings.instance.sceneAssignments;
-            string common = FindLabel(assignments, firstId.ToString());
-            if (string.IsNullOrEmpty(common))
+            if (!TryGetHierarchyLabelId(objects[0], out string common))
             {
                 return null;
             }
@@ -287,14 +284,95 @@ namespace Poyo.IrodoriColorizer.Editor
                     return null;
                 }
 
-                GlobalObjectId id = GlobalObjectId.GetGlobalObjectIdSlow(objects[i]);
-                if (id.identifierType == 0 || FindLabel(assignments, id.ToString()) != common)
+                if (!TryGetHierarchyLabelId(objects[i], out string labelId) || labelId != common)
                 {
                     return null;
                 }
             }
 
             return common;
+        }
+
+        internal static bool TryGetHierarchyLabelId(GameObject obj, out string labelId)
+        {
+            labelId = null;
+            if (obj == null)
+            {
+                return false;
+            }
+
+            GlobalObjectId id = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+            string sceneKey = id.identifierType != 0 ? id.ToString() : null;
+            IrodoriSettings settings = IrodoriSettings.instance;
+            bool hasProjectAssignments = settings.projectAssignments != null && settings.projectAssignments.Count > 0;
+            return TryGetHierarchyLabelId(
+                obj,
+                sceneKey,
+                null,
+                null,
+                hasProjectAssignments,
+                out labelId);
+        }
+
+        internal static bool TryGetHierarchyLabelId(
+            GameObject obj,
+            string sceneKey,
+            Dictionary<string, string> sceneAssignmentMap,
+            Dictionary<string, string> assetGuidCache,
+            bool hasProjectAssignments,
+            out string labelId)
+        {
+            labelId = null;
+            if (!string.IsNullOrEmpty(sceneKey))
+            {
+                bool foundSceneLabel = sceneAssignmentMap != null
+                    ? sceneAssignmentMap.TryGetValue(sceneKey, out labelId)
+                    : TryFindLabel(IrodoriSettings.instance.sceneAssignments, sceneKey, out labelId);
+                if (foundSceneLabel)
+                {
+                    return true;
+                }
+            }
+
+            if (!hasProjectAssignments || !TryGetPrefabAssetGuid(obj, assetGuidCache, out string guid))
+            {
+                labelId = null;
+                return false;
+            }
+
+            return IrodoriDrawer.TryGetProjectLabelId(guid, out labelId);
+        }
+
+        private static bool TryGetPrefabAssetGuid(
+            GameObject obj,
+            Dictionary<string, string> assetGuidCache,
+            out string guid)
+        {
+            guid = null;
+            // NOTE: 入れ子の Prefab は各ルートが自身の元アセットの色を示すため、最も近いルートで判定する。
+            if (obj == null || PrefabUtility.GetNearestPrefabInstanceRoot(obj) != obj)
+            {
+                return false;
+            }
+
+            string assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(obj);
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                return false;
+            }
+
+            if (assetGuidCache != null && assetGuidCache.TryGetValue(assetPath, out guid))
+            {
+                return !string.IsNullOrEmpty(guid);
+            }
+
+            guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (assetGuidCache != null)
+            {
+                assetGuidCache[assetPath] = guid;
+            }
+
+            return !string.IsNullOrEmpty(guid);
         }
 
         private static bool Upsert(List<IrodoriAssignment> assignments, string key, string labelId)
@@ -352,6 +430,36 @@ namespace Poyo.IrodoriColorizer.Editor
             }
 
             return null;
+        }
+
+        private static bool TryFindLabel(
+            List<IrodoriAssignment> assignments,
+            string key,
+            out string labelId)
+        {
+            labelId = FindLabel(assignments, key);
+            return !string.IsNullOrEmpty(labelId);
+        }
+
+        private static bool RemoveAssignment(List<IrodoriAssignment> assignments, string key)
+        {
+            if (assignments == null || string.IsNullOrEmpty(key))
+            {
+                return false;
+            }
+
+            bool removed = false;
+            for (int i = assignments.Count - 1; i >= 0; i--)
+            {
+                IrodoriAssignment assignment = assignments[i];
+                if (assignment != null && assignment.key == key)
+                {
+                    assignments.RemoveAt(i);
+                    removed = true;
+                }
+            }
+
+            return removed;
         }
 
         private static void SaveAndRefresh(bool changed)

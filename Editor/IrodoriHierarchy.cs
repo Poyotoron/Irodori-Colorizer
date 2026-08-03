@@ -91,14 +91,17 @@ namespace Poyo.IrodoriColorizer.Editor
             _dirty = false;
             Map.Clear();
 
-            List<IrodoriAssignment> assignments = IrodoriSettings.instance.sceneAssignments;
-            if (assignments == null || assignments.Count == 0)
+            IrodoriSettings settings = IrodoriSettings.instance;
+            List<IrodoriAssignment> assignments = settings.sceneAssignments;
+            int sceneAssignmentCount = assignments != null ? assignments.Count : 0;
+            bool hasProjectAssignments = settings.projectAssignments != null && settings.projectAssignments.Count > 0;
+            if (sceneAssignmentCount == 0 && !hasProjectAssignments)
             {
                 return;
             }
 
-            var assignmentMap = new Dictionary<string, string>(assignments.Count, System.StringComparer.Ordinal);
-            for (int i = 0; i < assignments.Count; i++)
+            var assignmentMap = new Dictionary<string, string>(sceneAssignmentCount, System.StringComparer.Ordinal);
+            for (int i = 0; i < sceneAssignmentCount; i++)
             {
                 IrodoriAssignment assignment = assignments[i];
                 if (assignment == null || string.IsNullOrEmpty(assignment.key) || string.IsNullOrEmpty(assignment.labelId))
@@ -109,7 +112,7 @@ namespace Poyo.IrodoriColorizer.Editor
                 assignmentMap[assignment.key] = assignment.labelId;
             }
 
-            if (assignmentMap.Count == 0)
+            if (assignmentMap.Count == 0 && !hasProjectAssignments)
             {
                 return;
             }
@@ -122,15 +125,25 @@ namespace Poyo.IrodoriColorizer.Editor
 #endif
             var ids = new GlobalObjectId[objects.Length];
             GlobalObjectId.GetGlobalObjectIdsSlow(objects, ids);
+            Dictionary<string, string> assetGuidCache = hasProjectAssignments
+                ? new Dictionary<string, string>(System.StringComparer.Ordinal)
+                : null;
 
             for (int i = 0; i < objects.Length; i++)
             {
-                if (ids[i].identifierType == 0 || !assignmentMap.TryGetValue(ids[i].ToString(), out string labelId))
+                string sceneKey = ids[i].identifierType != 0 ? ids[i].ToString() : null;
+                if (!IrodoriMenu.TryGetHierarchyLabelId(
+                        objects[i],
+                        sceneKey,
+                        assignmentMap,
+                        assetGuidCache,
+                        hasProjectAssignments,
+                        out string labelId))
                 {
                     continue;
                 }
 
-                if (!IrodoriPalette.TryResolve(labelId, out IrodoriLabel label))
+                if (!IrodoriLabelResolver.TryResolve(labelId, out IrodoriLabel label))
                 {
                     continue;
                 }

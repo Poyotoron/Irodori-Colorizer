@@ -16,11 +16,8 @@ namespace Poyo.IrodoriColorizer.Editor
 
         private static Dictionary<string, string> _projectMap;
         private static GUIStyle _labelStyle;
-        private static GUIStyle _gridLabelStyle;
         private static Color _lastTextColor;
-        private static Color _lastGridTextColor;
         private static bool _hasTextColor;
-        private static bool _hasGridTextColor;
 
         internal static Vector2 ContextScreenPosition { get; private set; }
 
@@ -47,7 +44,15 @@ namespace Poyo.IrodoriColorizer.Editor
         public static void Invalidate()
         {
             _projectMap = null;
+            IrodoriLabelResolver.Invalidate();
             IrodoriHierarchy.Invalidate();
+            IrodoriSettingsProvider.InvalidateAssignmentCounts();
+        }
+
+        /// <summary>アセット GUID に割り当てられたラベル ID を引く。</summary>
+        internal static bool TryGetProjectLabelId(string guid, out string labelId)
+        {
+            return ProjectMap.TryGetValue(guid, out labelId);
         }
 
         private static Dictionary<string, string> BuildProjectMap()
@@ -84,12 +89,7 @@ namespace Poyo.IrodoriColorizer.Editor
 
             // NOTE: EditorStyles は起動直後には未初期化のため、GUI が有効な最初の描画時に一度だけ複製する。
             _labelStyle = new GUIStyle(EditorStyles.label);
-            _gridLabelStyle = new GUIStyle(EditorStyles.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-            };
             _hasTextColor = false;
-            _hasGridTextColor = false;
         }
 
         private static void OnProjectItem(string guid, Rect selectionRect)
@@ -108,7 +108,7 @@ namespace Poyo.IrodoriColorizer.Editor
                 return;
             }
 
-            if (!IrodoriPalette.TryResolve(labelId, out IrodoriLabel label))
+            if (!IrodoriLabelResolver.TryResolve(labelId, out IrodoriLabel label))
             {
                 return;
             }
@@ -133,14 +133,14 @@ namespace Poyo.IrodoriColorizer.Editor
         private static void DrawProjectRow(Rect selectionRect, Color labelColor, bool isGrid, bool selected, string guid)
         {
             IrodoriSettings settings = IrodoriSettings.instance;
-            Color blended = Blend(labelColor, settings.fillAlpha);
 
             if (isGrid)
             {
-                DrawProjectGridCell(selectionRect, blended, selected, guid, settings);
+                DrawProjectGridCell(selectionRect, labelColor, selected, settings);
                 return;
             }
 
+            Color blended = Blend(labelColor, settings.fillAlpha);
             if (selected && settings.keepSelectionVisible)
             {
                 DrawSelectionBar(selectionRect, labelColor, 1f);
@@ -167,11 +167,11 @@ namespace Poyo.IrodoriColorizer.Editor
 
         private static void DrawProjectGridCell(
             Rect selectionRect,
-            Color blended,
+            Color labelColor,
             bool selected,
-            string guid,
             IrodoriSettings settings)
         {
+            Color blended = Blend(labelColor, settings.fillAlpha);
             if (selected && settings.keepSelectionVisible)
             {
                 var stripe = selectionRect;
@@ -180,41 +180,10 @@ namespace Poyo.IrodoriColorizer.Editor
                 return;
             }
 
-            EditorGUI.DrawRect(selectionRect, blended);
-
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (string.IsNullOrEmpty(path))
-            {
-                return;
-            }
-
-            UnityEngine.Object obj = AssetDatabase.LoadMainAssetAtPath(path);
-            Texture preview = obj != null ? AssetPreview.GetAssetPreview(obj) : null;
-            if (preview == null)
-            {
-                preview = AssetDatabase.GetCachedIcon(path);
-            }
-
-            const float labelHeight = 18f;
-            if (preview != null)
-            {
-                var previewRect = selectionRect;
-                previewRect.xMin += 4f;
-                previewRect.xMax -= 4f;
-                previewRect.yMin += 2f;
-                previewRect.yMax -= labelHeight;
-                if (previewRect.width > 0f && previewRect.height > 0f)
-                {
-                    GUI.DrawTexture(previewRect, preview, ScaleMode.ScaleToFit, true);
-                }
-            }
-
-            var labelRect = selectionRect;
-            labelRect.xMin += 2f;
-            labelRect.xMax -= 2f;
-            labelRect.yMin = labelRect.yMax - labelHeight;
-            string name = Path.GetFileNameWithoutExtension(path);
-            DrawGridName(labelRect, name, GetTextColor(blended, settings));
+            // NOTE: Unity 本来のサムネイルと名前を保つため、半透明の色だけを重ねる。
+            Color tint = labelColor;
+            tint.a = Mathf.Clamp01(settings.fillAlpha);
+            EditorGUI.DrawRect(selectionRect, tint);
         }
 
         internal static void DrawHierarchyRow(Rect selectionRect, Color labelColor, bool selected, bool inactive, GameObject obj)
@@ -295,28 +264,6 @@ namespace Poyo.IrodoriColorizer.Editor
             _labelStyle.onFocused.textColor = color;
             _lastTextColor = color;
             _hasTextColor = true;
-        }
-
-        private static void DrawGridName(Rect labelRect, string name, Color textColor)
-        {
-            EnsureStyles();
-            SetGridTextColor(textColor);
-            GUI.Label(labelRect, name, _gridLabelStyle);
-        }
-
-        private static void SetGridTextColor(Color color)
-        {
-            if (_hasGridTextColor && _lastGridTextColor == color)
-            {
-                return;
-            }
-
-            _gridLabelStyle.normal.textColor = color;
-            _gridLabelStyle.onNormal.textColor = color;
-            _gridLabelStyle.focused.textColor = color;
-            _gridLabelStyle.onFocused.textColor = color;
-            _lastGridTextColor = color;
-            _hasGridTextColor = true;
         }
 
         private static Color Blend(Color labelColor, float alpha)
