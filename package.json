@@ -1,7 +1,7 @@
 {
   "name": "net.maaaaa.irodori-colorizer",
   "displayName": "Irodori Colorizer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Project / Hierarchy の行に色付きラベルを付与するエディタ拡張です。",
   "unity": "2022.3",
   "license": "MIT",
@@ -9,6 +9,7 @@
     "name": "Poyotoron",
     "url": "https://github.com/Poyotoron"
   },
-  "url": "https://github.com/Poyotoron/Irodori-Colorizer/releases/download/0.2.0/net.maaaaa.irodori-colorizer-0.2.0.zip",
+  "url": "https://github.com/Poyotoron/Irodori-Colorizer/releases/download/0.2.1/net.maaaaa.irodori-colorizer-0.2.1.zip",
+  "documentationUrl": "https://ghp.maaaaa.net/Irodori-Colorizer/",
   "changelogUrl": "https://github.com/Poyotoron/Irodori-Colorizer/blob/main/CHANGELOG.md"
 }

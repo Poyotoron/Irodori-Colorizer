@@ -112,3 +112,6 @@ InitTestScene*.unity*
 .codex
 .agents/
 .agents
+
+# ドキュメントサイトのビルド成果物
+docs~/site/
