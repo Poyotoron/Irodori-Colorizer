@@ -7,6 +7,8 @@ Project ウィンドウと Hierarchy ウィンドウの行に色を付けて、�
 - Editor 専用。ビルドやアップロードの成果物には一切影響しません。
 - 特定の SDK に依存しない汎用ツールです。
 
+[使い方ドキュメント](https://ghp.maaaaa.net/Irodori-Colorizer/)では、ラベルの付け方・プリセット・設定を詳しく説明しています。
+
 ## 特徴
 
 - **Project / Hierarchy にラベル付け** — 右クリックから用途に合った色付きラベルを設定できます。
@@ -47,6 +49,8 @@ VPM（VCC / ALCOM）対応プロジェクトに、このパッケージを追加
 > Prefab でない GameObject の色はシーン上の識別子にひも付きます。これらへ色を設定するときは、
 > **シーンを一度保存してから**操作してください。Prefab インスタンスのルートは未保存シーンでも設定できます。
 
+詳しい操作方法は[使い方ドキュメント](https://ghp.maaaaa.net/Irodori-Colorizer/)を参照してください。
+
 ## 設定
 
 `Edit > Project Settings > Irodori Colorizer` で以下を調整できます。
@@ -57,6 +61,8 @@ VPM（VCC / ALCOM）対応プロジェクトに、このパッケージを追加
 - 用途別プリセットの有効 / 無効
 - 内蔵ラベルの色・名前・表示状態の変更とリセット
 - カラーコード（Hex）による独自ラベルの追加・編集・削除
+
+各項目の詳しい説明は[使い方ドキュメント](https://ghp.maaaaa.net/Irodori-Colorizer/)を参照してください。
 
 ## ライセンス
 
